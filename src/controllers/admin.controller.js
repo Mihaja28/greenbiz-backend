@@ -1,0 +1,313 @@
+const Entreprise = require('../models/entreprise.model');
+const Comment = require('../models/comment.model');
+const UpgradeRequest = require('../models/upgradeRequest.model');
+const User = require('../models/user.model'); // 🟢 AJOUT : Nécessaire pour la gestion des utilisateurs et suppression en cascade
+
+// 1. Récupérer toutes les entreprises en attente de validation
+exports.getPendingEntreprises = async (req, res) => {
+  try {
+    const pendingList = await Entreprise.findAll({
+      where: { status: 'pending' },
+      attributes: { exclude: ['password'] } 
+    });
+    res.json(pendingList);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 2. Valider ou Refuser une entreprise
+exports.updateEntrepriseStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; 
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: "Statut invalide envoyé." });
+    }
+
+    const entreprise = await Entreprise.findByPk(id);
+    if (!entreprise) {
+      return res.status(404).json({ message: "Entreprise introuvable." });
+    }
+
+    entreprise.status = status;
+    entreprise.isValidated = (status === 'approved');
+
+    await entreprise.save();
+
+    res.json({
+      message: `L'entreprise a été ${status === 'approved' ? 'approuvée' : 'refusée'} avec succès !`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// LABELS & MODÉRATION COMPLET
+exports.labelCompany = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, labelLevel } = req.body;
+
+    const company = await Entreprise.findByPk(id);
+    if (!company) {
+      return res.status(404).json({ message: "Entreprise introuvable." });
+    }
+
+    if (status) {
+      if (!['approved', 'rejected', 'pending'].includes(status)) {
+        return res.status(400).json({ message: "Statut invalide." });
+      }
+      company.status = status;
+      company.isValidated = (status === 'approved');
+    }
+
+    if (labelLevel) {
+      if (!['Bronze', 'Silver', 'Gold'].includes(labelLevel)) {
+        return res.status(400).json({ message: "Niveau de label invalide." });
+      }
+      company.labelLevel = labelLevel;
+    }
+
+    await company.save();
+
+    return res.json({
+      success: true,
+      message: "Mise à jour de l'entreprise effectuée avec succès.",
+      company
+    });
+  } catch (error) {
+    console.error("Erreur Admin Modération :", error);
+    return res.status(500).json({ message: "Erreur serveur.", error: error.message });
+  }
+};
+
+exports.getPendingComments = async (req, res) => {
+  try {
+    const pendingComments = await Comment.findAll({
+      where: { isApproved: false },
+      order: [['createdAt', 'DESC']] 
+    });
+    res.json(pendingComments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Approuver un commentaire
+exports.approveComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const comment = await Comment.findByPk(id);
+
+    if (!comment) {
+      return res.status(404).json({ message: "Commentaire introuvable." });
+    }
+
+    comment.isApproved = true;
+    await comment.save();
+
+    res.json({
+      success: true,
+      message: "Le commentaire a été approuvé et est désormais public !"
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Rejeter / Supprimer définitivement un commentaire
+exports.deleteComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const comment = await Comment.findByPk(id);
+
+    if (!comment) {
+      return res.status(404).json({ message: "Commentaire introuvable." });
+    }
+
+    await comment.destroy();
+    res.json({
+      success: true,
+      message: "Le commentaire a été rejeté et supprimé de la base de données."
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getDashboardStats = async (req, res) => {
+  try {
+    const [pendingEntreprisesCount, pendingCommentsCount, pendingUpgradesCount] = await Promise.all([
+      Entreprise.count({ where: { status: 'pending' } }),
+      Comment.count({ where: { isApproved: false } }),
+      UpgradeRequest.count({ where: { status: 'Pending' } }),
+    ]);
+
+    res.json({
+      success: true,
+      pendingEntreprisesCount,
+      pendingCommentsCount,
+      pendingUpgradesCount,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ACTIVITÉ RÉCENTE
+exports.getRecentActivity = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+
+    const treatedEntreprises = await Entreprise.findAll({
+      where: { status: ['approved', 'rejected'] },
+      attributes: ['id', 'name', 'status', 'updatedAt'],
+      order: [['updatedAt', 'DESC']],
+      limit: limit,
+    });
+
+    const treatedComments = await Comment.findAll({
+      where: { isApproved: true },
+      attributes: ['id', 'text', 'updatedAt', 'entrepriseId'],
+      order: [['updatedAt', 'DESC']],
+      limit: limit,
+    });
+
+    const treatedUpgrades = await UpgradeRequest.findAll({
+      where: { status: ['Approved', 'Rejected'] },
+      attributes: ['id', 'currentLevel', 'requestedLevel', 'status', 'updatedAt', 'entrepriseId'],
+      include: [{ model: Entreprise, attributes: ['name'] }],
+      order: [['updatedAt', 'DESC']],
+      limit: limit,
+    });
+
+    const activities = [];
+
+    treatedEntreprises.forEach((e) => {
+      activities.push({
+        type: 'entreprise',
+        action: e.status, 
+        label: e.status === 'approved'
+          ? `Entreprise "${e.name}" validée`
+          : `Entreprise "${e.name}" refusée`,
+        date: e.updatedAt,
+      });
+    });
+
+    treatedComments.forEach((c) => {
+      activities.push({
+        type: 'comment',
+        action: 'approved',
+        label: `Commentaire approuvé`,
+        date: c.updatedAt,
+      });
+    });
+
+    treatedUpgrades.forEach((u) => {
+      const companyName = u.Entreprise?.name || "Entreprise";
+      activities.push({
+        type: 'upgrade',
+        action: u.status.toLowerCase(), 
+        label: u.status === 'Approved'
+          ? `Label ${u.requestedLevel} accordé à "${companyName}"`
+          : `Demande d'upgrade refusée pour "${companyName}"`,
+        date: u.updatedAt,
+      });
+    });
+
+    activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const recent = activities.slice(0, limit);
+
+    res.json({
+      success: true,
+      data: recent,
+    });
+  } catch (error) {
+    console.error("Erreur getRecentActivity :", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
+
+/**
+ * @desc    3. Récupérer toutes les entreprises validées / actives
+ * @route   GET /api/admin/companies
+ */
+exports.getAllCompanies = async (req, res) => {
+  try {
+    const companies = await Entreprise.findAll({
+      where: { status: 'approved' }, // On prend uniquement celles validées pour la gestion active
+      order: [['createdAt', 'DESC']]
+    });
+    res.json({ success: true, data: companies });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * @desc    4. Supprimer une entreprise définitivement
+ * @route   DELETE /api/admin/companies/:id
+ */
+exports.deleteEntreprise = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const entreprise = await Entreprise.findByPk(id);
+
+    if (!entreprise) {
+      return res.status(404).json({ success: false, message: "Entreprise introuvable." });
+    }
+
+    // On procède à la suppression
+    await entreprise.destroy();
+    res.json({
+      success: true,
+      message: "L'entreprise a été supprimée avec succès de la plateforme."
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * @desc    5. Récupérer tous les utilisateurs ayant le rôle 'citoyen'
+ * @route   GET /api/admin/users
+ */
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      where: { role: 'citoyen' },
+      attributes: { exclude: ['password'] }, // Sécurité
+      order: [['createdAt', 'DESC']]
+    });
+    res.json({ success: true, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * @desc    6. Supprimer un utilisateur définitivement
+ * @route   DELETE /api/admin/users/:id
+ */
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findOne({ where: { id, role: 'citoyen' } });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Utilisateur introuvable ou rôle non modérable." });
+    }
+
+    await user.destroy();
+    res.json({
+      success: true,
+      message: `L'utilisateur ${user.name} a été supprimé définitivement.`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

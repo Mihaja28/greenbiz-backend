@@ -1,0 +1,16 @@
+# Dépendances (trop lourdes, réinstallées automatiquement par Render via npm install)
+node_modules/
+
+# Variables d'environnement (contient mots de passe, clés secrètes - NE JAMAIS PARTAGER)
+.env
+
+# Fichiers uploadés localement (logos, galeries) - ne pas versionner les images
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Fichiers système
+.DS_Store
+Thumbs.db
