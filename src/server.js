@@ -34,7 +34,7 @@ app.use('/api/enterprise', upgradeRoutes);
 const PORT = process.env.PORT || 5000;
 
 
-sequelize.sync({ force: true }) 
+sequelize.sync({ alter: true }) 
   .then(() => {
     console.log('Base de données PostgreSQL synchronisée !');
     app.listen(PORT, () => {
