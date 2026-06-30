@@ -3,7 +3,7 @@ const router = express.Router();
 const Comment = require('../models/comment.model');
 const { protect, restrictTo } = require('../middlewares/auth.middleware');
 
-// 1. Ajouter un commentaire (Sécurisé : Utilisateur connecté uniquement)
+// Ajouter un commentaire (Sécurisé : Utilisateur connecté uniquement)
 const createComment = async (req, res) => {
   try {
     const newComment = await Comment.create(req.body);
@@ -13,7 +13,7 @@ const createComment = async (req, res) => {
   }
 };
 
-// 2. Voir les commentaires validés d'une entreprise (Public)
+// Voir les commentaires validés d'une entreprise (Public)
 const getCompanyComments = async (req, res) => {
   try {
     const comments = await Comment.findAll({
@@ -29,7 +29,7 @@ const getCompanyComments = async (req, res) => {
   }
 };
 
-// 3. Voir tous les commentaires (Admin)
+// Voir tous les commentaires (Admin)
 const getAllCommentsAdmin = async (req, res) => {
   try {
     const comments = await Comment.findAll({ order: [['createdAt', 'DESC']] });
@@ -39,7 +39,7 @@ const getAllCommentsAdmin = async (req, res) => {
   }
 };
 
-// [NOUVEAU] 3b. Voir uniquement les commentaires EN ATTENTE (Admin)
+//  Voir uniquement les commentaires EN ATTENTE (Admin)
 const getPendingCommentsAdmin = async (req, res) => {
   try {
     const comments = await Comment.findAll({
@@ -52,7 +52,7 @@ const getPendingCommentsAdmin = async (req, res) => {
   }
 };
 
-// 4. Approuver un commentaire (Admin)
+// Approuver un commentaire (Admin)
 const approveComment = async (req, res) => {
   try {
     const comment = await Comment.findByPk(req.params.id);
@@ -67,7 +67,7 @@ const approveComment = async (req, res) => {
   }
 };
 
-// 5. Supprimer un commentaire (Admin)
+// Supprimer un commentaire (Admin)
 const deleteComment = async (req, res) => {
   try {
     const comment = await Comment.findByPk(req.params.id);
@@ -80,7 +80,7 @@ const deleteComment = async (req, res) => {
   }
 };
 
-// --- Définition des Routes ---
+// ---Routes ---
 
 // Route publique pour envoyer un avis
 router.post('/', protect, createComment);

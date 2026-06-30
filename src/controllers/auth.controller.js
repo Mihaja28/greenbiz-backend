@@ -10,21 +10,21 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Vérification de l'utilisateur et du mot de passe
+    // Vérification de l'utilisateur et du mot de passe
     const user = await User.findOne({ where: { email } });
     if (!user || !(await user.correctPassword(password, user.password))) {
       return res.status(401).json({ message: "Email ou mot de passe incorrect" });
     }
 
-    // 2. Génération du Token JWT
-    // On y stocke les infos nécessaires pour le middleware protect et restrictTo
+    // Génération du Token JWT
+    
     const token = jwt.sign(
       { id: user.id, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' } // Le token expire après 24 heures
     );
 
-    // 3. Renvoi de la réponse au client (Flutter)
+    // Renvoi de la réponse au client (Flutter)
     res.status(200).json({
       status: 'success',
       token,
@@ -69,7 +69,7 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// 2. RÉINITIALISER LE MOT DE PASSE - Valider le token et changer le mot de passe
+// RÉINITIALISER LE MOT DE PASSE - Valider le token et changer le mot de passe
 exports.resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 

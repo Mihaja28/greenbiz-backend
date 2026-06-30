@@ -12,7 +12,7 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password, region, address, description } = req.body;
 
-    // 1. Validation de sécurité : s'assurer que les champs requis ne sont pas vides
+    //  Validation de sécurité : s'assurer que les champs requis ne sont pas vides
     if (!name || !email || !password || !region || !address) {
       console.log(" Échec : Certains champs obligatoires sont manquants dans la requête.");
       return res.status(400).json({
@@ -20,17 +20,17 @@ exports.register = async (req, res) => {
       });
     }
 
-    // 2. Vérification de l'existence de l'entreprise
+    //  Vérification de l'existence de l'entreprise
     const existingEnt = await Entreprise.findOne({ where: { email: email.trim().toLowerCase() } });
     if (existingEnt) {
       console.log(` Échec : L'email ${email} est déjà enregistré.`);
       return res.status(400).json({ message: "Cet e-mail professionnel est déjà utilisé." });
     }
 
-    // 3. Hachage sécurisé du mot de passe
+    // Hachage sécurisé du mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Insertion dans PostgreSQL avec le statut par défaut 'pending'
+    // Insertion dans PostgreSQL avec le statut par défaut 'pending'
     console.log(" Tentative d'insertion dans la table PostgreSQL...");
     const newEntreprise = await Entreprise.create({
       name: name.trim(),
@@ -131,7 +131,7 @@ exports.updateProfile = async (req, res) => {
   console.log("existingGallery reçu:", existingGallery);
 
   try {
-    // 1. Recherche de l'entreprise concernée
+    //  Recherche de l'entreprise concernée
     const entreprise = await Entreprise.findByPk(id);
     if (!entreprise) {
       return res.status(404).json({ success: false, message: "Entreprise introuvable." });
@@ -139,13 +139,13 @@ exports.updateProfile = async (req, res) => {
 
     console.log("galleryUrls actuel en base:", entreprise.galleryUrls);
 
-    // 2. Traitement du Logo
+    //  Traitement du Logo
     let currentLogoUrl = entreprise.logoUrl;
     if (req.files && req.files['logo']) {
       currentLogoUrl = `/uploads/${req.files['logo'][0].filename}`;
     }
 
-    // 3. Traitement de la Galerie Photos (Prise en compte des suppressions faites sur Flutter)
+    // Traitement de la Galerie Photos (Prise en compte des suppressions faites sur Flutter)
     let currentGalleryUrls = [];
 
     if (existingGallery) {
@@ -159,7 +159,7 @@ exports.updateProfile = async (req, res) => {
       currentGalleryUrls = entreprise.galleryUrls || [];
     }
 
-    // 4. Ajout des nouvelles photos chargées si elles existent
+    // Ajout des nouvelles photos chargées si elles existent
     if (req.files && req.files['gallery']) {
       const newPhotos = req.files['gallery'].map(file => `/uploads/${file.filename}`);
       currentGalleryUrls = [...currentGalleryUrls, ...newPhotos];
@@ -167,7 +167,7 @@ exports.updateProfile = async (req, res) => {
 
     console.log("galleryUrls qui va être sauvegardé:", currentGalleryUrls);
 
-    // 5. Application des modifications via Sequelize
+    //  Application des modifications via Sequelize
     await entreprise.update({
       name: name ? name.trim() : entreprise.name,
       email: email ? email.trim().toLowerCase() : entreprise.email,
@@ -179,7 +179,7 @@ exports.updateProfile = async (req, res) => {
       galleryUrls: currentGalleryUrls
     });
 
-    // 6. Renvoyer l'objet rafraîchi (sans le mot de passe) pour Flutter
+    // Renvoyer l'objet rafraîchi (sans le mot de passe) pour Flutter
     const updatedData = entreprise.toJSON();
     delete updatedData.password;
 

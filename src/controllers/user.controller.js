@@ -6,16 +6,16 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // 1. Vérifier si l'adresse e-mail est déjà prise
+    //  Vérifier si l'adresse e-mail est déjà prise
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: "Cet e-mail est déjà associé à un compte." });
     }
 
-    // 2. Hacher le mot de passe
+    //  Hacher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Créer l'utilisateur
+    //  Créer l'utilisateur
     const newUser = await User.create({
       name,
       email,
@@ -39,26 +39,26 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     const jwt = require('jsonwebtoken');
 
-    // 1. Chercher l'utilisateur par e-mail
+    //  Chercher l'utilisateur par e-mail
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(404).json({ message: "Identifiants incorrects." });
     }
 
-    // 2. Vérifier le mot de passe
+    //  Vérifier le mot de passe
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Identifiants incorrects." });
     }
 
-    // 3. Générer le token JWT
+    //  Générer le token JWT
     const token = jwt.sign(
       { id: user.id, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    // 4. Préparer la réponse sans le mot de passe
+    // Préparer la réponse sans le mot de passe
     const userResponse = user.toJSON();
     delete userResponse.password;
 

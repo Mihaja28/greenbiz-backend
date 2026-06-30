@@ -70,8 +70,8 @@ const validateCompany = async (req, res) => {
 
 // --- LE CORPS DES ROUTES ---
 router.get('/', entrepriseCtrl.getPublicCompanies);
-router.post('/register', entrepriseCtrl.register); // Utilise ton contrôleur externe
-router.post('/login', entrepriseCtrl.login);       // Utilise ton contrôleur externe
+router.post('/register', entrepriseCtrl.register); // Utilise contrôleur externe
+router.post('/login', entrepriseCtrl.login);       // Utilise contrôleur externe
 router.get('/admin/all', getAllCompaniesAdmin);
 router.put('/:id/validate', validateCompany);
 

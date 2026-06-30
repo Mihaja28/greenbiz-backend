@@ -1,9 +1,8 @@
 const Entreprise = require('../models/entreprise.model');
 const Comment = require('../models/comment.model');
 const UpgradeRequest = require('../models/upgradeRequest.model');
-const User = require('../models/user.model'); // 🟢 AJOUT : Nécessaire pour la gestion des utilisateurs et suppression en cascade
-
-// 1. Récupérer toutes les entreprises en attente de validation
+const User = require('../models/user.model'); 
+// Récupérer toutes les entreprises en attente de validation
 exports.getPendingEntreprises = async (req, res) => {
   try {
     const pendingList = await Entreprise.findAll({
@@ -16,7 +15,7 @@ exports.getPendingEntreprises = async (req, res) => {
   }
 };
 
-// 2. Valider ou Refuser une entreprise
+// Valider ou Refuser une entreprise
 exports.updateEntrepriseStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -157,20 +156,23 @@ exports.getDashboardStats = async (req, res) => {
 };
 
 // ACTIVITÉ RÉCENTE
+// RECENT ACTIVITY CORRIGÉ
 exports.getRecentActivity = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
     const treatedEntreprises = await Entreprise.findAll({
       where: { status: ['approved', 'rejected'] },
-      attributes: ['id', 'name', 'status', 'updatedAt'],
+      // Sécurité : on prend l'ID et les statuts sans risquer le crash sur le nom
+      attributes: ['id', 'status', 'updatedAt'], 
       order: [['updatedAt', 'DESC']],
       limit: limit,
     });
 
     const treatedComments = await Comment.findAll({
       where: { isApproved: true },
-      attributes: ['id', 'text', 'updatedAt', 'entrepriseId'],
+      // Utilisation de 'texte' (comme défini dans votre modèle) au lieu de 'text'
+      attributes: ['id', 'texte', 'updatedAt', 'entrepriseId'], 
       order: [['updatedAt', 'DESC']],
       limit: limit,
     });
@@ -178,7 +180,6 @@ exports.getRecentActivity = async (req, res) => {
     const treatedUpgrades = await UpgradeRequest.findAll({
       where: { status: ['Approved', 'Rejected'] },
       attributes: ['id', 'currentLevel', 'requestedLevel', 'status', 'updatedAt', 'entrepriseId'],
-      include: [{ model: Entreprise, attributes: ['name'] }],
       order: [['updatedAt', 'DESC']],
       limit: limit,
     });
@@ -190,8 +191,8 @@ exports.getRecentActivity = async (req, res) => {
         type: 'entreprise',
         action: e.status, 
         label: e.status === 'approved'
-          ? `Entreprise "${e.name}" validée`
-          : `Entreprise "${e.name}" refusée`,
+          ? `Une organisation a été validée`
+          : `Une organisation a été refusée`,
         date: e.updatedAt,
       });
     });
@@ -200,19 +201,18 @@ exports.getRecentActivity = async (req, res) => {
       activities.push({
         type: 'comment',
         action: 'approved',
-        label: `Commentaire approuvé`,
+        label: `Commentaire citoyen approuvé`,
         date: c.updatedAt,
       });
     });
 
     treatedUpgrades.forEach((u) => {
-      const companyName = u.Entreprise?.name || "Entreprise";
       activities.push({
         type: 'upgrade',
         action: u.status.toLowerCase(), 
         label: u.status === 'Approved'
-          ? `Label ${u.requestedLevel} accordé à "${companyName}"`
-          : `Demande d'upgrade refusée pour "${companyName}"`,
+          ? `Label ${u.requestedLevel} accordé`
+          : `Demande d'upgrade de niveau rejetée`,
         date: u.updatedAt,
       });
     });
@@ -233,7 +233,7 @@ exports.getRecentActivity = async (req, res) => {
 
 
 /**
- * @desc    3. Récupérer toutes les entreprises validées / actives
+ * @desc    Récupérer toutes les entreprises validées / actives
  * @route   GET /api/admin/companies
  */
 exports.getAllCompanies = async (req, res) => {
@@ -249,7 +249,7 @@ exports.getAllCompanies = async (req, res) => {
 };
 
 /**
- * @desc    4. Supprimer une entreprise définitivement
+ * @desc    Supprimer une entreprise définitivement
  * @route   DELETE /api/admin/companies/:id
  */
 exports.deleteEntreprise = async (req, res) => {
@@ -273,7 +273,7 @@ exports.deleteEntreprise = async (req, res) => {
 };
 
 /**
- * @desc    5. Récupérer tous les utilisateurs ayant le rôle 'citoyen'
+ * @desc    Récupérer tous les utilisateurs ayant le rôle 'citoyen'
  * @route   GET /api/admin/users
  */
 exports.getAllUsers = async (req, res) => {
@@ -290,7 +290,7 @@ exports.getAllUsers = async (req, res) => {
 };
 
 /**
- * @desc    6. Supprimer un utilisateur définitivement
+ * @desc    Supprimer un utilisateur définitivement
  * @route   DELETE /api/admin/users/:id
  */
 exports.deleteUser = async (req, res) => {
