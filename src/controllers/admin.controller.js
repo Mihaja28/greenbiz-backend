@@ -189,7 +189,8 @@ exports.getRecentActivity = async (req, res) => {
 
     const treatedComments = await Comment.findAll({
       where: { isApproved: true },
-      attributes: ['id', 'texte', 'updatedAt', 'entrepriseId'], 
+      
+      attributes: ['id', 'text', 'updatedAt', 'entrepriseId'], 
       order: [['updatedAt', 'DESC']],
       limit: limit,
     });
@@ -233,7 +234,7 @@ exports.getRecentActivity = async (req, res) => {
     activities.sort((a, b) => new Date(b.date) - new Date(a.date));
     const recent = activities.slice(0, limit);
 
-   
+    
     res.json({
       success: true,
       data: recent 
@@ -241,10 +242,9 @@ exports.getRecentActivity = async (req, res) => {
 
   } catch (error) {
     console.error("Erreur getRecentActivity :", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 };
-
 
 
 /**
