@@ -1,21 +1,21 @@
 const nodemailer = require('nodemailer');
 
 // ─── CONFIGURATION DU TRANSPORTEUR GMAIL ───
-// Utilise un "mot de passe d'application" Gmail, pas le mot de passe normal du compte.
-// À générer depuis : Compte Google > Sécurité > Validation en 2 étapes > Mots de passe des applications
+// Port 587 avec STARTTLS (compatible Render free tier)
+// Port 465 avec SSL est bloqué par Render sur le plan gratuit
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // false = STARTTLS (plus compatible que SSL sur les hébergeurs)
   auth: {
-    user: process.env.EMAIL_USER, // ex: votreapp@gmail.com
-    pass: process.env.EMAIL_PASSWORD, // mot de passe d'application (16 caractères, sans espaces)
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+  tls: {
+    rejectUnauthorized: false, // évite les erreurs de certificat sur certains hébergeurs
   },
 });
 
-/**
- * Envoie un e-mail contenant le code de réinitialisation à 6 caractères.
- * @param {string} toEmail - L'adresse e-mail du destinataire
- * @param {string} token - Le code de réinitialisation (ex: "A1B2C3")
- */
 exports.sendResetEmail = async (toEmail, token) => {
   const mailOptions = {
     from: `"GreenBiz Madagascar" <${process.env.EMAIL_USER}>`,
