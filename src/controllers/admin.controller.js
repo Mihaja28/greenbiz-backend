@@ -160,16 +160,20 @@ exports.getDashboardStats = async (req, res) => {
     const [pendingEntreprisesCount, pendingCommentsCount, pendingUpgradesCount] = await Promise.all([
       Entreprise.count({ where: { status: 'pending' } }),
       Comment.count({ where: { isApproved: false } }),
-      UpgradeRequest.count({ where: { status: 'Pending' } }),
+      UpgradeRequest.count({ where: { status: 'Pending' } }), // Attention à la casse ('Pending' ou 'pending' selon votre DB)
     ]);
 
+   
+    
     res.json({
       success: true,
       pendingEntreprisesCount,
-      pendingCommentsCount,
-      pendingUpgradesCount,
+      pendingCommentsCount, // Flutter l'associera à reportedCommentsCount ou pendingCommentsCount
+      pendingUpgradesCount
     });
+
   } catch (error) {
+    console.error("Erreur getDashboardStats :", error);
     res.status(500).json({ error: error.message });
   }
 };
