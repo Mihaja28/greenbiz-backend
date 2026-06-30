@@ -15,14 +15,24 @@ exports.getPendingEntreprises = async (req, res) => {
   }
 };
 
-// Valider ou Refuser une entreprise
+// Valider ou Refuser une entreprise (Backend adapté pour le Front)
 exports.updateEntrepriseStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; 
+    let { status } = req.body; 
 
+    //  Si Flutter envoie un booléen (approve: true/false) au lieu d'un String
+    if (status === true || req.body.approve === true) {
+      status = 'approved';
+    } else if (status === false || req.body.approve === false) {
+      status = 'rejected';
+    }
+
+    // Sécurité au cas où la valeur reçue reste incorrecte
     if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ message: "Statut invalide envoyé." });
+      return res.status(400).json({ 
+        message: "Statut invalide. Le backend attend 'approved', 'rejected' ou un booléen." 
+      });
     }
 
     const entreprise = await Entreprise.findByPk(id);
@@ -35,14 +45,16 @@ exports.updateEntrepriseStatus = async (req, res) => {
 
     await entreprise.save();
 
+    
     res.json({
+      success: true,
       message: `L'entreprise a été ${status === 'approved' ? 'approuvée' : 'refusée'} avec succès !`
     });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 };
-
 // LABELS & MODÉRATION COMPLET
 exports.labelCompany = async (req, res) => {
   try {
