@@ -10,7 +10,7 @@ router.get('/recent-activity', protect, restrictTo('admin'), adminCtrl.getRecent
 
 // --- VALIDATION & LABELS (ENTREPRISES EN ATTENTE) ---
 router.get('/entreprises/pending', protect, restrictTo('admin'), adminCtrl.getPendingEntreprises);
-router.put('/entreprises/validate/:id', protect, restrictTo('admin'), adminCtrl.updateEntrepriseStatus);
+router.put('/entreprises/:id/validate', protect, restrictTo('admin'), adminCtrl.updateEntrepriseStatus);
 
 // --- DEMANDES D'UPGRADE ---
 router.get('/upgrades/pending', protect, restrictTo('admin'), upgradeController.getPendingUpgrades);
