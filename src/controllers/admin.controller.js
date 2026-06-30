@@ -16,29 +16,48 @@ exports.getPendingEntreprises = async (req, res) => {
 };
 
 // Valider ou Refuser une entreprise
+
 exports.updateEntrepriseStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; 
+    const { isValidated, status } = req.body; // Interception de 'isValidated' envoyé par Flutter
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ message: "Statut invalide envoyé." });
+    let finalStatus;
+
+    // 1. Déduction du statut en fonction de ce que le Front envoie
+    if (isValidated !== undefined) {
+      // Si Flutter envoie {"isValidated": true} -> 'approved', sinon 'rejected'
+      finalStatus = isValidated ? 'approved' : 'rejected';
+    } else if (status) {
+      finalStatus = status;
+    } else {
+      return res.status(400).json({ message: "Aucun indicateur de validation reçu." });
     }
 
+    // 2. Vérification de sécurité pour Sequelize
+    if (!['approved', 'rejected'].includes(finalStatus)) {
+      return res.status(400).json({ message: "Statut invalide." });
+    }
+
+    // 3. Recherche et mise à jour en Base de Données
     const entreprise = await Entreprise.findByPk(id);
     if (!entreprise) {
       return res.status(404).json({ message: "Entreprise introuvable." });
     }
 
-    entreprise.status = status;
-    entreprise.isValidated = (status === 'approved');
+    entreprise.status = finalStatus;
+    entreprise.isValidated = (finalStatus === 'approved');
 
     await entreprise.save();
 
+    // 4. Réponse propre (HTTP 200) attendue par le service Flutter
     res.json({
-      message: `L'entreprise a été ${status === 'approved' ? 'approuvée' : 'refusée'} avec succès !`
+      success: true,
+      message: `L'entreprise a été ${finalStatus === 'approved' ? 'approuvée' : 'refusée'} avec succès !`
     });
+
   } catch (error) {
+    console.error("Erreur validation entreprise :", error);
     res.status(500).json({ error: error.message });
   }
 };
