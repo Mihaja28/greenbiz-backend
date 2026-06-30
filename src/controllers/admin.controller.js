@@ -160,15 +160,13 @@ exports.getDashboardStats = async (req, res) => {
     const [pendingEntreprisesCount, pendingCommentsCount, pendingUpgradesCount] = await Promise.all([
       Entreprise.count({ where: { status: 'pending' } }),
       Comment.count({ where: { isApproved: false } }),
-      UpgradeRequest.count({ where: { status: 'Pending' } }), // Attention à la casse ('Pending' ou 'pending' selon votre DB)
+      UpgradeRequest.count({ where: { status: 'Pending' } }),
     ]);
 
-   
-    
+    // Renvoie l'objet direct attendu par le jsonDecode du Front
     res.json({
-      success: true,
       pendingEntreprisesCount,
-      pendingCommentsCount, // Flutter l'associera à reportedCommentsCount ou pendingCommentsCount
+      pendingCommentsCount, 
       pendingUpgradesCount
     });
 
@@ -178,15 +176,12 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// ACTIVITÉ RÉCENTE
-// RECENT ACTIVITY CORRIGÉ
 exports.getRecentActivity = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
     const treatedEntreprises = await Entreprise.findAll({
       where: { status: ['approved', 'rejected'] },
-      // Sécurité : on prend l'ID et les statuts sans risquer le crash sur le nom
       attributes: ['id', 'status', 'updatedAt'], 
       order: [['updatedAt', 'DESC']],
       limit: limit,
@@ -194,7 +189,6 @@ exports.getRecentActivity = async (req, res) => {
 
     const treatedComments = await Comment.findAll({
       where: { isApproved: true },
-      // Utilisation de 'texte' (comme défini dans votre modèle) au lieu de 'text'
       attributes: ['id', 'texte', 'updatedAt', 'entrepriseId'], 
       order: [['updatedAt', 'DESC']],
       limit: limit,
@@ -213,9 +207,7 @@ exports.getRecentActivity = async (req, res) => {
       activities.push({
         type: 'entreprise',
         action: e.status, 
-        label: e.status === 'approved'
-          ? `Une organisation a été validée`
-          : `Une organisation a été refusée`,
+        label: e.status === 'approved' ? `Une organisation a été validée` : `Une organisation a été refusée`,
         date: e.updatedAt,
       });
     });
@@ -233,9 +225,7 @@ exports.getRecentActivity = async (req, res) => {
       activities.push({
         type: 'upgrade',
         action: u.status.toLowerCase(), 
-        label: u.status === 'Approved'
-          ? `Label ${u.requestedLevel} accordé`
-          : `Demande d'upgrade de niveau rejetée`,
+        label: u.status === 'Approved' ? `Label ${u.requestedLevel} accordé` : `Demande d'upgrade rejetée`,
         date: u.updatedAt,
       });
     });
@@ -243,13 +233,15 @@ exports.getRecentActivity = async (req, res) => {
     activities.sort((a, b) => new Date(b.date) - new Date(a.date));
     const recent = activities.slice(0, limit);
 
+   
     res.json({
       success: true,
-      data: recent,
+      data: recent 
     });
+
   } catch (error) {
     console.error("Erreur getRecentActivity :", error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 

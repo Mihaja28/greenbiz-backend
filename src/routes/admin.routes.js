@@ -5,6 +5,11 @@ const { protect, restrictTo } = require('../middlewares/auth.middleware');
 const upgradeController = require('../controllers/upgrade.controller');
 
 // --- STATS & ACTIVITÉS ---
+
+router.get('/api/admin/dashboard-stats', protect, restrictTo('admin'), adminCtrl.getDashboardStats);
+router.get('/api/admin/recent-activity', protect, restrictTo('admin'), adminCtrl.getRecentActivity);
+
+
 router.get('/dashboard-stats', protect, restrictTo('admin'), adminCtrl.getDashboardStats);
 router.get('/recent-activity', protect, restrictTo('admin'), adminCtrl.getRecentActivity);
 
